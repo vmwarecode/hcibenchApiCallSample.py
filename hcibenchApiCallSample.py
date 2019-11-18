@@ -92,7 +92,7 @@ class HCIBench(object):
 			body = form.get_binary().getvalue()
 			ctype = form.get_content_type()
 			headers = {'Content-Type': ctype, 'Authorization' : 'Basic %s' % self.userAndPass, 'Content-length' : str(len(form_buffer))}
-			conn = httplib.HTTPSConnection(self.ip + ":8443")
+			conn = httplib.HTTPSConnection(self.ip + ":8443", context = ssl._create_unverified_context())
 			conn.request(method,'/VMtest/' + restAddr, body, headers)
 		except socket.error, e:
 			raise SystemExit(1)
