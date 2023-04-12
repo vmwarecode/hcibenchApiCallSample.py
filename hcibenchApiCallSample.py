@@ -1,4 +1,5 @@
 #For python2.7, tested with vSphere 7 and vSphere 8
+#Compatible with HCIBench 2.8.1+
 import mimetools
 import mimetypes
 import io
