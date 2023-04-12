@@ -11,221 +11,221 @@ import ssl
 from base64 import b64encode
 
 class MultiPartForm(object):
-        """Accumulate the data to be used when posting a form."""
+    """Accumulate the data to be used when posting a form."""
 
-        def __init__(self):
-                self.form_fields = []
-                self.files = []
-                self.boundary = mimetools.choose_boundary()
-                return
+    def __init__(self):
+        self.form_fields = []
+        self.files = []
+        self.boundary = mimetools.choose_boundary()
+        return
 
-        def get_content_type(self):
-                return 'multipart/form-data; boundary=%s' % self.boundary
+    def get_content_type(self):
+        return 'multipart/form-data; boundary=%s' % self.boundary
 
-        def add_field(self, name, value):
-                """Add a simple field to the form data."""
-                self.form_fields.append((name, value))
-                return
+    def add_field(self, name, value):
+        """Add a simple field to the form data."""
+        self.form_fields.append((name, value))
+        return
 
-        def add_file(self, fieldname, filename, fileHandle, mimetype=None):
-                """Add a file to be uploaded."""
-                body = fileHandle.read()
-                if mimetype is None:
-                        mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
-                self.files.append((fieldname, filename, mimetype, body))
-                return
+    def add_file(self, fieldname, filename, fileHandle, mimetype=None):
+        """Add a file to be uploaded."""
+        body = fileHandle.read()
+        if mimetype is None:
+            mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+        self.files.append((fieldname, filename, mimetype, body))
+        return
 
-        def get_binary(self):
-                """Return a binary buffer containing the form data, including attached files."""
-                part_boundary = '--' + self.boundary
-                binary = io.BytesIO()
-                needsCLRF = False
-                # Add the form fields
-                for name, value in self.form_fields:
-                        if needsCLRF:
-                                binary.write('\r\n')
-                        needsCLRF = True
+    def get_binary(self):
+        """Return a binary buffer containing the form data, including attached files."""
+        part_boundary = '--' + self.boundary
+        binary = io.BytesIO()
+        needsCLRF = False
+        # Add the form fields
+        for name, value in self.form_fields:
+            if needsCLRF:
+                binary.write('\r\n')
+            needsCLRF = True
 
-                        block = [part_boundary,
-                          'Content-Disposition: form-data; name="%s"' % name,
-                          '',
-                          value
-                        ]
-                        binary.write('\r\n'.join(block))
+            block = [part_boundary,
+              'Content-Disposition: form-data; name="%s"' % name,
+              '',
+              value
+            ]
+            binary.write('\r\n'.join(block))
 
-                # Add the files to upload
-                for field_name, filename, content_type, body in self.files:
-                        if needsCLRF:
-                                binary.write('\r\n')
-                        needsCLRF = True
+            # Add the files to upload
+        for field_name, filename, content_type, body in self.files:
+            if needsCLRF:
+                binary.write('\r\n')
+            needsCLRF = True
 
-                        block = [part_boundary,
-                          str('Content-Disposition: form-data; name="%s"; filename="%s"' % \
-                          (field_name, filename)),
-                          'Content-Type: %s' % content_type,
-                          ''
-                          ]
-                        binary.write('\r\n'.join(block))
-                        binary.write('\r\n')
-                        binary.write(body)
+            block = [part_boundary,
+              str('Content-Disposition: form-data; name="%s"; filename="%s"' % \
+              (field_name, filename)),
+              'Content-Type: %s' % content_type,
+              ''
+              ]
+            binary.write('\r\n'.join(block))
+            binary.write('\r\n')
+            binary.write(body)
 
-                # add closing boundary marker,
-                binary.write('\r\n--' + self.boundary + '--\r\n')
-                return binary
+        # add closing boundary marker,
+        binary.write('\r\n--' + self.boundary + '--\r\n')
+        return binary
 
 class HCIBench(object):
-        def __init__(self,ip, username, password, tool):
+    def __init__(self,ip, username, password, tool):
 
-                self.userAndPass = b64encode(username+":"+password).decode("ascii")
-                self.ip = ip
-                self.tool = tool
-                self.msg_queue = ""
-                return
+        self.userAndPass = b64encode(username+":"+password).decode("ascii")
+        self.ip = ip
+        self.tool = tool
+        self.msg_queue = ""
+        return
 
-        def __connectServer__(self, method, restAddr ,request_body={}, file=None, file_field=""):
-                form = MultiPartForm()
-                if request_body != {}:
-                        for field, value in request_body.items():
-                                form.add_field(field, value)
-                if file:
-                        form.add_file(file_field, file.name, file)
+    def __connectServer__(self, method, restAddr ,request_body={}, file=None, file_field=""):
+        form = MultiPartForm()
+        if request_body != {}:
+            for field, value in request_body.items():
+                form.add_field(field, value)
+        if file:
+            form.add_file(file_field, file.name, file)
 
-                try:
-                        form_buffer = form.get_binary().getvalue()
-                        body = form.get_binary().getvalue()
-                        ctype = form.get_content_type()
-                        headers = {'Content-Type': ctype, 'Authorization' : 'Basic %s' % self.userAndPass, 'Content-length' : str(len(form_buffer))}
-                        conn = httplib.HTTPSConnection(self.ip + ":8443", context = ssl._create_unverified_context())
-                        conn.request(method,'/VMtest/' + restAddr, body, headers)
-                except socket.error, e:
-                        raise SystemExit(1)
-                return conn.getresponse()
+        try:
+            form_buffer = form.get_binary().getvalue()
+            body = form.get_binary().getvalue()
+            ctype = form.get_content_type()
+            headers = {'Content-Type': ctype, 'Authorization' : 'Basic %s' % self.userAndPass, 'Content-length' : str(len(form_buffer))}
+            conn = httplib.HTTPSConnection(self.ip + ":8443", context = ssl._create_unverified_context())
+            conn.request(method,'/VMtest/' + restAddr, body, headers)
+        except socket.error, e:
+            raise SystemExit(1)
+        return conn.getresponse()
 
-        #Load the hcibench configuration, aka /opt/automation/conf/perf-conf.yaml
-        def read_hcibench_config(self):
-            res = self.__connectServer__("POST", "readconfigfile")
-            jsonObj = json.loads(res.read())
-            return jsonObj
+    #Load the hcibench configuration, aka /opt/automation/conf/perf-conf.yaml
+    def read_hcibench_config(self):
+        res = self.__connectServer__("POST", "readconfigfile")
+        jsonObj = json.loads(res.read())
+        return jsonObj
 
-        #Configure hcibench test, aka /opt/automation/conf/perf-conf.yaml
-        def configure_hcibench(self, request_body):
-            res = self.__connectServer__("POST", "generatefile", request_body)
-            jsonObj = json.loads(res.read())
-            if jsonObj != {} and jsonObj["status"] == '200':
-                return "Success"
-            else:
-                return "Fail", jsonObj
+    #Configure hcibench test, aka /opt/automation/conf/perf-conf.yaml
+    def configure_hcibench(self, request_body):
+        res = self.__connectServer__("POST", "generatefile", request_body)
+        jsonObj = json.loads(res.read())
+        if jsonObj != {} and jsonObj["status"] == '200':
+            return "Success"
+        else:
+            return "Fail", jsonObj
 
-        #Load parameter files of a given tool
-        def get_param_files(self, tool_param=""):
-                if tool_param == "":
-                        tool_selection = {"tool": self.tool}
-                else:
-                        tool_selection = {"tool": tool_param}
+    #Load parameter files of a given tool
+    def get_param_files(self, tool_param=""):
+        if tool_param == "":
+            tool_selection = {"tool": self.tool}
+        else:
+            tool_selection = {"tool": tool_param}
 
-                res = self.__connectServer__("POST", "getvdbenchparamFile", tool_selection)
-                jsonObj = json.loads(res.read())
-                param_files = jsonObj["data"]
-                return param_files
+        res = self.__connectServer__("POST", "getvdbenchparamFile", tool_selection)
+        jsonObj = json.loads(res.read())
+        param_files = jsonObj["data"]
+        return param_files
 
-        #Configure workload parameter
-        def generate_param_file(self, param_body):
-            res = self.__connectServer__("POST", "generateParam", param_body)
-            jsonObj = json.loads(res.read())
-            if jsonObj != {} and jsonObj["status"] == '200':
-                name = "%s-%svmdk-%sws-%s-%srdpct-%srandompct-%sthreads" % \
-                (param_body["tool"], param_body["diskNum"], param_body["workSet"], param_body["blockSize"], param_body["readPercent"], param_body["randomPercent"], param_body["threadNum"])
-                return "Success", name
-            else:
-                return "Fail", jsonObj
+    #Configure workload parameter
+    def generate_param_file(self, param_body):
+        res = self.__connectServer__("POST", "generateParam", param_body)
+        jsonObj = json.loads(res.read())
+        if jsonObj != {} and jsonObj["status"] == '200':
+            name = "%s-%svmdk-%sws-%s-%srdpct-%srandompct-%sthreads" % \
+            (param_body["tool"], param_body["diskNum"], param_body["workSet"], param_body["blockSize"], param_body["readPercent"], param_body["randomPercent"], param_body["threadNum"])
+            return "Success", name
+        else:
+            return "Fail", jsonObj
 
-        #Delete a workload parameter file by name
-        def delete_param_file(self, filename, tool_param=""):
-                if tool_param == "":
-                        tool_param = self.tool
+    #Delete a workload parameter file by name
+    def delete_param_file(self, filename, tool_param=""):
+        if tool_param == "":
+            tool_param = self.tool
 
-                res = self.__connectServer__("POST", "deleteFile?name=%s&tool=%s" % (filename,tool_param))
-                jsonObj = json.loads(res.read())
-                if jsonObj != {} and jsonObj["status"] == '200':
-                        return "Success"
-                else:
-                        return "Fail", jsonObj
+        res = self.__connectServer__("POST", "deleteFile?name=%s&tool=%s" % (filename,tool_param))
+        jsonObj = json.loads(res.read())
+        if jsonObj != {} and jsonObj["status"] == '200':
+            return "Success"
+        else:
+            return "Fail", jsonObj
 
-        #Upload a local vdbench zip to HCIBench /opt/output/vdbench-source
-        def upload_vdbench_zip(self, vdbench_zip):
-            file = open(vdbench_zip, "rb")
-            res = self.__connectServer__("POST", "uploadvdbench", {}, file, "vdbenchfile")
-            jsonObj = json.loads(res.read())
-            if jsonObj["status"] == "200":
-                return "Success"
-            else:
-                return "Fail", jsonObj
+    #Upload a local vdbench zip to HCIBench /opt/output/vdbench-source
+    def upload_vdbench_zip(self, vdbench_zip):
+        file = open(vdbench_zip, "rb")
+        res = self.__connectServer__("POST", "uploadvdbench", {}, file, "vdbenchfile")
+        jsonObj = json.loads(res.read())
+        if jsonObj["status"] == "200":
+            return "Success"
+        else:
+            return "Fail", jsonObj
 
-        #Upload a local workload parameter file to HCIBench /opt/automation/(vdbench/fio)-param-files
-        def upload_param_file(self, param_file):
-            file = open(param_file, "rb")
-            res = self.__connectServer__("POST", "uploadParamfile", {"tool": self.tool}, file, "paramfile")
-            jsonObj = json.loads(res.read())
-            if jsonObj["status"] == "200":
-                return "Success"
-            else:
-                return "Fail", jsonObj
+    #Upload a local workload parameter file to HCIBench /opt/automation/(vdbench/fio)-param-files
+    def upload_param_file(self, param_file):
+        file = open(param_file, "rb")
+        res = self.__connectServer__("POST", "uploadParamfile", {"tool": self.tool}, file, "paramfile")
+        jsonObj = json.loads(res.read())
+        if jsonObj["status"] == "200":
+            return "Success"
+        else:
+            return "Fail", jsonObj
 
-        #Kick off prevalidation, return True if success
-        def prevalidation(self):
-            res = self.__connectServer__("POST", "validatefile")
-            jsonObj = json.loads(res.read())
+    #Kick off prevalidation, return True if success
+    def prevalidation(self):
+        res = self.__connectServer__("POST", "validatefile")
+        jsonObj = json.loads(res.read())
 
-            if "All the config has been validated, please go ahead to kick off testing" in jsonObj["data"]:
-                return True
-            else:
-                print jsonObj["data"]
-                return False
+        if "All the config has been validated, please go ahead to kick off testing" in jsonObj["data"]:
+            return True
+        else:
+            print jsonObj["data"]
+            return False
 
-        #Start HCIBench testing
-        def start_testing(self):
-            res = self.__connectServer__("POST", "runtest")
-            jsonObj = json.loads(res.read())
-            if jsonObj != {} and jsonObj["status"] == '200':
-                return "Success"
-            else:
-                return "Fail", jsonObj
+    #Start HCIBench testing
+    def start_testing(self):
+        res = self.__connectServer__("POST", "runtest")
+        jsonObj = json.loads(res.read())
+        if jsonObj != {} and jsonObj["status"] == '200':
+            return "Success"
+        else:
+            return "Fail", jsonObj
 
-        #Kill HCIBench testing
-        def kill_testing(self):
-            res = self.__connectServer__("POST", "killtest")
-            jsonObj = json.loads(res.read())
-            if jsonObj["status"] == "200":
-                return "Success"
-            else:
-                return "Fail", jsonObj
+    #Kill HCIBench testing
+    def kill_testing(self):
+        res = self.__connectServer__("POST", "killtest")
+        jsonObj = json.loads(res.read())
+        if jsonObj["status"] == "200":
+            return "Success"
+        else:
+            return "Fail", jsonObj
 
-        #Check whether HCIBench testing finished
-        def is_test_finished(self):
-                res = self.__connectServer__("POST", "istestfinish")
-                jsonObj = json.loads(res.read())
-                if jsonObj["data"] == '200':
-                        return True
-                else:
-                        return False
+    #Check whether HCIBench testing finished
+    def is_test_finished(self):
+        res = self.__connectServer__("POST", "istestfinish")
+        jsonObj = json.loads(res.read())
+        if jsonObj["data"] == '200':
+            return True
+        else:
+            return False
 
-        #Delete guest VMs
-        def cleanup_vms(self):
-            res = self.__connectServer__("POST", "cleanupvms")
-            jsonObj = json.loads(res.read())
-            if jsonObj["status"] != '200':
-                return "Fail", jsonObj
-            else:
-                return "Success"
+    #Delete guest VMs
+    def cleanup_vms(self):
+        res = self.__connectServer__("POST", "cleanupvms")
+        jsonObj = json.loads(res.read())
+        if jsonObj["status"] != '200':
+            return "Fail", jsonObj
+        else:
+            return "Success"
 
-        #Load HCIBench test status
-        def read_test_status(self):
-            res = self.__connectServer__("GET", "readlog")
-            jsonObj = json.loads(res.read())
-            if "data" in jsonObj and jsonObj["data"] not in self.msg_queue:
-                delta = jsonObj["data"].replace(self.msg_queue.replace('\n...\n',''),'').replace('<br>',"\n")
-                self.msg_queue += delta + "\n"
-                return self.msg_queue
+    #Load HCIBench test status
+    def read_test_status(self):
+        res = self.__connectServer__("GET", "readlog")
+        jsonObj = json.loads(res.read())
+        if "data" in jsonObj and jsonObj["data"] not in self.msg_queue:
+            delta = jsonObj["data"].replace(self.msg_queue.replace('\n...\n',''),'').replace('<br>',"\n")
+            self.msg_queue += delta + "\n"
+            return self.msg_queue
 
 #fio or vdbench
 TOOL = ""
@@ -244,7 +244,7 @@ vdbench_zip_file_path = ""
 """
 request_body example:
 request_body = {
-        "tool": TOOL,
+    "tool": TOOL,
     "vcenterIp": "10.156.12.15",
     "vcenterName": "administrator@vsphere.local",
     "vcenterPwd": "vmware",
@@ -278,7 +278,7 @@ request_body = {
     "duration": "3600",
     "cleanUp": "false",
     "selectVdbench": "fio-8vmdk-4k-50ws-4thread"
-    }
+}
 
 """
 
@@ -355,7 +355,7 @@ request_body = {
     "cleanUp": "",
     #The workload param file name, if not specified, will "USE ALL", for either fio or vdbench
     "selectVdbench": ""
-    }
+}
 
 
 """
@@ -379,7 +379,7 @@ param_body = {
     "cpuUsage": "80", <- fio only
     "latencyTarget": "20000", <- fio only
     "tool": TOOL
-    }
+}
 """
 
 param_body = {
@@ -420,7 +420,7 @@ param_body = {
     #for fio only, set latency target in microseconds, 1+ integer (OPTIONAL)
     "latencyTarget": "",
     "tool": TOOL
-    }
+}
 
 hcibench = HCIBench(HCIBench_IP, HCIBench_Username, HCIBench_Password, TOOL)
 #print "upload param: ", hcibench.upload_param_file(workload_param_file_path)
@@ -435,7 +435,7 @@ print "kill testing: ", hcibench.kill_testing()
 print "generate param file: ", hcibench.generate_param_file(param_body)
 print "configure hcibench: ", hcibench.configure_hcibench(request_body)
 if hcibench.prevalidation():
-    print "start testing: ", hcibench.start_testing()
-    while not hcibench.is_test_finished():
-        print "hcibench testing status: ", hcibench.read_test_status()
-        time.sleep(180)
+print "start testing: ", hcibench.start_testing()
+while not hcibench.is_test_finished():
+    print "hcibench testing status: ", hcibench.read_test_status()
+    time.sleep(180)
