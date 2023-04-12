@@ -436,7 +436,7 @@ print "kill testing: ", hcibench.kill_testing()
 print "generate param file: ", hcibench.generate_param_file(param_body)
 print "configure hcibench: ", hcibench.configure_hcibench(request_body)
 if hcibench.prevalidation():
-print "start testing: ", hcibench.start_testing()
-while not hcibench.is_test_finished():
-    print "hcibench testing status: ", hcibench.read_test_status()
-    time.sleep(180)
+    print "start testing: ", hcibench.start_testing()
+    while not hcibench.is_test_finished():
+        print "hcibench testing status: ", hcibench.read_test_status()
+        time.sleep(180)
